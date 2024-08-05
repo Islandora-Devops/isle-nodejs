@@ -1,25 +1,14 @@
-###############################################################################
-# Variables
-###############################################################################
+variable "SOURCE_DATE_EPOCH" {
+  default = "0"
+}
+
 variable "REPOSITORY" {
   default = "islandora"
 }
 
-variable "CACHE_FROM_REPOSITORY" {
-  default = "islandora"
-}
-
-variable "CACHE_TO_REPOSITORY" {
-  default = "islandora"
-}
-
 variable "TAG" {
-  # "local" is to distinguish that from builds produced locally.
+  # "local" is to distinguish remote images from those produced locally.
   default = "local"
-}
-
-variable "SOURCE_DATE_EPOCH" {
-  default = "0"
 }
 
 ###############################################################################
@@ -37,12 +26,12 @@ function "tags" {
 
 function "cacheFrom" {
   params = [image, arch]
-  result = ["type=registry,ref=${CACHE_FROM_REPOSITORY}/cache:${image}-main-${arch}", "type=registry,ref=${CACHE_FROM_REPOSITORY}/cache:${image}-${TAG}-${arch}"]
+  result = ["type=registry,ref=${REPOSITORY}/cache:${image}-main-${arch}", "type=registry,ref=${REPOSITORY}/cache:${image}-${TAG}-${arch}"]
 }
 
 function "cacheTo" {
   params = [image, arch]
-  result =  ["type=registry,oci-mediatypes=true,mode=max,compression=estargz,compression-level=5,ref=${CACHE_TO_REPOSITORY}/cache:${image}-${TAG}-${arch}"]
+  result = ["type=registry,oci-mediatypes=true,mode=max,compression=estargz,compression-level=5,ref=${REPOSITORY}/cache:${image}-${TAG}-${arch}"]
 }
 
 ###############################################################################
@@ -50,7 +39,7 @@ function "cacheTo" {
 ###############################################################################
 group "default" {
   targets = [
-    "nodejs"
+    "nodejs",
   ]
 }
 
@@ -75,7 +64,7 @@ group "ci" {
 }
 
 ###############################################################################
-# Common target properties.
+# Targets
 ###############################################################################
 target "common" {
   args = {
@@ -86,14 +75,6 @@ target "common" {
   }
 }
 
-target "amd64-common" {
-  platforms = ["linux/amd64"]
-}
-
-target "arm64-common" {
-  platforms = ["linux/arm64"]
-}
-
 target "nodejs-common" {
   inherits = ["common"]
   context  = "nodejs"
@@ -101,29 +82,16 @@ target "nodejs-common" {
     # The digest (sha256 hash) is not platform specific but the digest for the manifest of all platforms.
     # It will be the digest printed when you do: docker pull alpine:3.17.1
     # Not the one displayed on DockerHub.
-    # N.B. This should match the value used in:
-    # - <https://github.com/Islandora-Devops/isle-imagemagick>
-    # - <https://github.com/Islandora-Devops/isle-nodejs>
-    alpine = "docker-image://alpine:3.19.1@sha256:c5b1261d6d3e43071626931fc004f70149baeba2c8ec672bd4f27761f8e1ad6b"
+    # N.B. This should match the value used in <https://github.com/Islandora-Devops/isle-buildkit>
+    alpine = "docker-image://alpine:3.20.2@sha256:0a4eaa0eecf5f8c050e5bba433f58c052be7587ee8af3e8b3910ef9ab5fbe9f5"
   }
 }
 
-###############################################################################
-# Default Image targets for local builds.
-###############################################################################
-target "nodejs" {
-  inherits   = ["nodejs-common"]
-  cache-from = cacheFrom("nodejs", hostArch())
-  tags       = tags("nodejs", "")
-}
-
-###############################################################################
-# linux/amd64 targets.
-###############################################################################
 target "nodejs-amd64" {
-  inherits   = ["nodejs-common", "amd64-common"]
-  cache-from = cacheFrom("nodejs", "amd64")
+  inherits   = ["nodejs-common"]
   tags       = tags("nodejs", "amd64")
+  cache-from = cacheFrom("nodejs", "amd64")
+  platforms  = ["linux/amd64"]
 }
 
 target "nodejs-amd64-ci" {
@@ -131,16 +99,20 @@ target "nodejs-amd64-ci" {
   cache-to = cacheTo("nodejs", "amd64")
 }
 
-###############################################################################
-# linux/arm64 targets.
-###############################################################################
 target "nodejs-arm64" {
-  inherits   = ["nodejs-common", "arm64-common"]
-  cache-from = cacheFrom("nodejs", "arm64")
+  inherits   = ["nodejs-common"]
   tags       = tags("nodejs", "arm64")
+  cache-from = cacheFrom("nodejs", "arm64")
+  platforms  = ["linux/arm64"]
 }
 
 target "nodejs-arm64-ci" {
   inherits = ["nodejs-arm64"]
   cache-to = cacheTo("nodejs", "arm64")
+}
+
+target "nodejs" {
+  inherits   = ["nodejs-common"]
+  cache-from = cacheFrom("nodejs", hostArch())
+  tags       = tags("nodejs", "")
 }

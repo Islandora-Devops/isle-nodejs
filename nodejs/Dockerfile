@@ -31,6 +31,7 @@ RUN --mount=type=bind,readwrite=true,source=build,target=/build \
         nghttp2-dev \
         openssl-dev \
         py3-jinja2 \
+        py3-setuptools \
         python3 \
         samurai \
         zlib-dev \
