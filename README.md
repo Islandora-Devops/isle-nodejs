@@ -7,6 +7,7 @@
 - [Requirements](#requirements)
 - [Host-platform Builds](#host-platform-builds)
 - [Multi-platform builds](#multi-platform-builds)
+- [Release Builds / Updating DockerHub](#release-builds--updating-dockerhub)
 
 ## Introduction
 
@@ -48,6 +49,29 @@ After which you should be able to build with the following command:
 
 ```bash
 REPOSITORY=islandora.io docker buildx bake --builder isle-builder ci --push
+```
+
+## Release Builds / Updating DockerHub
+
+Unfortunately this takes too long to cross compile as a Github actions so
+building and updating images in DockerHub must be done manually.
+
+First create a tag that includes both the alpine version and the nodejs version.
+For example:
+
+```bash
+git tag alpine-3.20.2-nodejs-18.19.1-r0
+```
+
+Then build and push the images to DockerHub, and create an manifest:
+
+```bash
+export REPOSITORY=islandora
+export TAG=alpine-3.20.2-nodejs-20.15.1-r0
+docker login -u islandoracommunity
+docker buildx bake --builder isle-builder ci --push
+docker buildx imagetools create -t islandora/nodejs:${TAG} islandora/nodejs:${TAG}-amd64 islandora/nodejs:${TAG}-arm64
+docker logout
 ```
 
 [isle-builder]: https://github.com/Islandora-Devops/isle-builder

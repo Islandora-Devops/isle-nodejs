@@ -24,6 +24,8 @@ ARG TARGETARCH
 RUN --mount=type=bind,readwrite=true,source=build,target=/build \
     --mount=type=cache,id=nodejs-apk-${TARGETARCH},sharing=locked,target=/var/cache/apk \
     export PACKAGES=(\
+        ada-dev \
+        base64-dev \
         brotli-dev \
         c-ares-dev \
         icu-dev \
