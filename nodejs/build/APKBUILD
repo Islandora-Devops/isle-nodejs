@@ -1,4 +1,4 @@
-# Adapted from: https://git.alpinelinux.org/aports/tree/community/imagemagick/APKBUILD
+# Adapted from: https://git.alpinelinux.org/aports/tree/community/nodejs/APKBUILD
 # Contributor: Nigel Banks <nigel.g.banks@gmail.com>
 # Contributor: Jose-Luis Rivas <ghostbar@riseup.net>
 # Contributor: Jakub Jirutka <jakub@jirutka.cz>
@@ -6,8 +6,11 @@
 # Contributor: Tadahisa Kamijo <kamijin@live.jp>
 # Contributor: Eivind Uggedal <eu@eju.no>
 # Maintainer: Jakub Jirutka <jakub@jirutka.cz>
-#
 # secfixes:
+#   20.18.2-r0:
+#     - CVE-2025-23083
+#     - CVE-2025-23084
+#     - CVE-2025-23085
 #   20.15.1-r0:
 #     - CVE-2024-22018
 #     - CVE-2024-22020
@@ -122,10 +125,11 @@
 #     - CVE-2023-44487
 #     - CVE-2024-36138
 #     - CVE-2024-37372
+#     - CVE-2025-22150
 pkgname=nodejs
 # Note: Update only to even-numbered versions (e.g. 6.y.z, 8.y.z)!
 # Odd-numbered versions are supported only for 9 months by upstream.
-pkgver=20.15.1
+pkgver=20.18.3
 pkgrel=0
 pkgdesc="JavaScript runtime built on V8 engine - LTS version"
 url="https://nodejs.org/"
@@ -142,9 +146,10 @@ makedepends="
 	nghttp2-dev
 	openssl-dev
 	py3-jinja2
-	py3-setuptools
 	python3
 	samurai
+	simdjson-dev
+	simdutf-dev
 	zlib-dev
 	"
 install="$pkgname.post-upgrade"
@@ -153,12 +158,11 @@ provider_priority=100  # highest priority (other provider is nodejs-current)
 provides="nodejs-lts=$pkgver-r$pkgrel"  # for backward compatibility
 replaces="nodejs-current nodejs-lts"  # nodejs-lts for backward compatibility
 source="https://nodejs.org/dist/v$pkgver/node-v$pkgver.tar.gz
-	disable-running-gyp-on-shared-deps.patch
-	system-ada.patch
-	system-base64.patch
+	ada.gyp
 	base64.gyp
+	dynamic-linking.patch
+	disable-running-gyp-on-shared-deps.patch
 	$pkgname.pc.in
-	nodejs.post-upgrade
 	"
 builddir="$srcdir/node-v$pkgver"
 
@@ -173,7 +177,7 @@ prepare() {
 	# NOTE: nghttp3 and ngtcp2 are only used when building with OpenSSL
 	#  that supports QUIC. After the QUIC support is added to openssl, add
 	#  options --shared-nghttp3 and --shared-ngtcp2.
-	rm -rf deps/ada/*.cpp \
+	rm -rf deps/ada/* \
 		deps/base64/* \
 		deps/brotli \
 		deps/cares \
@@ -182,6 +186,7 @@ prepare() {
 		deps/nghttp3 \
 		deps/ngtcp2 \
 		deps/openssl/* \
+		deps/simdjson \
 		deps/v8/third_party/jinja2 \
 		deps/zlib \
 		tools/inspector_protocol/jinja2
@@ -189,6 +194,7 @@ prepare() {
 	mv nodejs-openssl.cnf deps/openssl/
 
 	cp "$srcdir"/base64.gyp deps/base64/
+	cp "$srcdir"/ada.gyp deps/ada/
 }
 
 build() {
@@ -233,11 +239,14 @@ _build() {
 		--prefix=/usr \
 		--ninja \
 		--enable-lto \
+		--shared-ada \
 		--shared-brotli \
 		--shared-zlib \
 		--shared-openssl \
 		--shared-cares \
 		--shared-nghttp2 \
+		--shared-simdjson \
+		--shared-simdutf \
 		--openssl-use-def-ca-store \
 		--with-icu-default-data-dir=$(icu-config --icudatadir) \
 		--with-intl=system-icu \
@@ -276,11 +285,10 @@ dev() {
 }
 
 sha512sums="
-0eb35b71a63d5894216fae82be859ed1649d955781abdc44ef9d99cf99972f4ec5120239d81c6b0820ddb07abfb264cee2b8b0baaf52acbfa50863e28a3eed0c  node-v20.15.1.tar.gz
-8c264eefc0bfa9dd57656f9f515e940d5c21b8d836dc549031ee559ba909643f4f2495b8b392ee9976c5eed7c3b4a09db876bbe0f7fcd5b2bf63fafca37bffc2  disable-running-gyp-on-shared-deps.patch
-4fc09500212ebc178801e7419c840ccebc239ff06edcb28910315e39bfc772a3967f5ff2abff03845269e730643be161134ac95bab899069fa57dd64be98defa  system-ada.patch
-94db1f150cb962bf19f42e0ef7cec2c0e007d1909611d03a393095720cc8db58322e638ea3c3280b4412f47615963c88e69c71b4c5adf84292b9fc7f3be3b110  system-base64.patch
+d6ede785e7bd62e6b28239c61452129b473bddaa3cbfa426d308e1330abb0e625232395b2c9dd345f36eb1543247eae0c702d27de707a18e5b7f3bdc7716c30a  node-v20.18.3.tar.gz
+529f0b16c5e0403b7dde66ef0d672059322b565299746a62a808aa3953858f0118f9fd216167a63e1a4676ba67f2a6e8f55314b72e017fa6d8e9bdfecb02cd3c  ada.gyp
 bb0f74d8fb1ef07fd457670b9073a3cecadb3ac7d4fea008e8f17c091a62d15ef50646be457a50ac24c4129085d4da21beedd03af0739dded5d636916482f082  base64.gyp
+3b409e7d6e73780d82781c3c7f26c2905c4fa972136537d5757c35d87ba07dd0a2a9a7b3b0f602f6c055d672b7d89730774649ed1b009b3dd2dce3eee7475eb0  disable-running-gyp-on-shared-deps.patch
+5d006ac6841c551efecd2410ce426675d3523456490bb56395fab06c7e59c2da666f6928b54610480147f79da40fb436a3b8ad7c66083ca253f3f6ea49259640  dynamic-linking.patch
 f908fa93f6194ec4f6c5e9d76ed7c918721c7f5d46afcc12de1f84683c185401a27a174b7a7c6a76085a4d0826f964e7088bf5596d4e6901a15bf751846299a6  nodejs.pc.in
-3cf6b9e0aba8ca153f16e4767afa018ab4453a95ff4e05f77f6363ceb9b54ccf98f2d240fb716309ed7441d44fa3710c63f8826370ed79733b04c64d603746e6  nodejs.post-upgrade
 "
